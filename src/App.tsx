@@ -1,12 +1,13 @@
 import { useState, useCallback } from 'react'
 import { PiecePalette } from './components/PiecePalette'
 import { SolverPanel } from './components/SolverPanel'
-import { createBoard, placePiece, removePiece, resetBoard } from './utils/board-utils'
+import { createBoard, placePiece, removePiece } from './utils/board-utils'
+import { applySolutionToBoard, clearSolution } from './utils/solution-application'
 import { createPentominoPiece, getAllPentominoTypes } from './utils/pentomino-definitions'
 import { DEFAULT_PRESET } from './utils/constants'
 import { useDragAndDrop } from './hooks/useDragAndDrop'
 import { usePieceManipulation } from './hooks/usePieceManipulation'
-import type { PentominoPiece, Point } from './types'
+import type { PentominoPiece, Point, SolverResult } from './types'
 import './styles/App.css'
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
   })
 
   const [selectedPieceId, setSelectedPieceId] = useState<string>()
+  const [currentSolution, setCurrentSolution] = useState<SolverResult | null>(null)
 
   // Handle piece updates
   const handlePieceUpdate = useCallback((updatedPiece: PentominoPiece) => {
@@ -80,20 +82,30 @@ function App() {
 
   // Handle solution application
   const handleSolutionApplied = useCallback((solutionIndex: number) => {
-    // This will be implemented when we have solver results
-    console.log('Apply solution:', solutionIndex)
-  }, [])
+    if (!currentSolution || !currentSolution.solutions[solutionIndex]) {
+      console.warn('No solution available to apply')
+      return
+    }
+
+    const solution = currentSolution.solutions[solutionIndex]
+    const result = applySolutionToBoard(board, pieces, solution)
+
+    if (result.success) {
+      setPieces(result.updatedPieces)
+      console.log(`Successfully applied solution ${solutionIndex + 1}`)
+    } else {
+      console.error('Failed to apply solution:', result.failedPlacements)
+      if (result.error) {
+        console.error('Error:', result.error)
+      }
+    }
+  }, [currentSolution, board, pieces])
 
   // Reset board
   const handleResetBoard = useCallback(() => {
-    // Reset the board
-    setBoard(prev => {
-      const newBoard = { ...prev }
-      resetBoard(newBoard)
-      return newBoard
-    })
+    clearSolution(board, pieces)
 
-    // Reset all pieces
+    // Update pieces state
     setPieces(prev => prev.map(piece => ({
       ...piece,
       isPlaced: false,
@@ -102,6 +114,13 @@ function App() {
     })))
 
     setSelectedPieceId(undefined)
+    setCurrentSolution(null)
+  }, [board, pieces])
+
+  // Handle solver completion
+  const handleSolverComplete = useCallback((result: SolverResult) => {
+    setCurrentSolution(result)
+    console.log('Solver completed:', result)
   }, [])
 
   // Placeholder handlers for future board interaction
@@ -174,6 +193,7 @@ function App() {
                 <SolverPanel
                   board={board}
                   onSolutionApplied={handleSolutionApplied}
+                  onSolvingComplete={handleSolverComplete}
                 />
               </div>
             </div>

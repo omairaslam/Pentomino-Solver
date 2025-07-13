@@ -78,15 +78,35 @@ export class DancingLinksSolver {
     this.shouldStop = false
 
     try {
+      // Validate board before building matrix
+      if (!this.validateBoard(board)) {
+        return {
+          success: true,
+          solutions: [],
+          totalTime: Date.now() - this.startTime,
+          stepsExplored: 0,
+        }
+      }
+
       // Build the exact cover matrix
       this.buildMatrix(board)
-      
+
+      // Validate matrix construction
+      if (!this.validateMatrix()) {
+        return {
+          success: true,
+          solutions: [],
+          totalTime: Date.now() - this.startTime,
+          stepsExplored: this.stepsExplored,
+        }
+      }
+
       // Solve using Algorithm X
       const solution: number[] = []
       await this.search(solution)
-      
+
       const totalTime = Date.now() - this.startTime
-      
+
       return {
         success: true,
         solutions: this.solutions,
@@ -265,7 +285,7 @@ export class DancingLinksSolver {
   }
 
   /**
-   * Algorithm X search function
+   * Algorithm X search function with optimizations
    */
   private async search(solution: number[]): Promise<void> {
     // Check for timeout
@@ -292,6 +312,12 @@ export class DancingLinksSolver {
 
     // Choose column with minimum size (MRV heuristic)
     const column = this.chooseColumn()
+
+    // Early termination if column is empty (no solution possible)
+    if (column.size === 0) {
+      return
+    }
+
     this.cover(column)
 
     // Try each row in the chosen column
@@ -301,21 +327,25 @@ export class DancingLinksSolver {
       solution.push(row.rowId)
 
       // Cover all other columns in this row
+      const coveredColumns: ColumnNode[] = []
       for (let j = row.right; j !== row; j = j.right) {
-        this.cover(j.column!)
+        if (j.column) {
+          this.cover(j.column)
+          coveredColumns.push(j.column)
+        }
       }
 
-      // Add delay for visualization if needed
+      // Add delay for visualization if needed (reduced for performance)
       if (this.config.trackSteps) {
-        await this.delay(10)
+        await this.delay(5)
       }
 
       // Recursively search
       await this.search(solution)
 
-      // Backtrack: uncover columns
-      for (let j = row.left; j !== row; j = j.left) {
-        this.uncover(j.column!)
+      // Backtrack: uncover columns in reverse order
+      for (let i = coveredColumns.length - 1; i >= 0; i--) {
+        this.uncover(coveredColumns[i])
       }
 
       solution.pop()
@@ -431,6 +461,80 @@ export class DancingLinksSolver {
    */
   stop(): void {
     this.shouldStop = true
+  }
+
+  /**
+   * Validate board configuration before solving
+   */
+  private validateBoard(board: Board): boolean {
+    // Count empty cells
+    let emptyCells = 0
+    for (let y = 0; y < board.config.height; y++) {
+      for (let x = 0; x < board.config.width; x++) {
+        if (board.cells[y][x].state === 'empty') {
+          emptyCells++
+        }
+      }
+    }
+
+    // Check if we have exactly 60 empty cells (12 pieces × 5 cells each)
+    if (emptyCells !== 60) {
+      return false
+    }
+
+    // Check minimum board dimensions
+    if (board.config.width < 3 || board.config.height < 3) {
+      return false
+    }
+
+    return true
+  }
+
+  /**
+   * Validate matrix construction
+   */
+  private validateMatrix(): boolean {
+    // Check if we have the right number of columns
+    const expectedColumns = 12 + this.getEmptyCellCount() // 12 pieces + empty cells
+    if (this.columns.length !== expectedColumns) {
+      console.warn(`Matrix validation failed: expected ${expectedColumns} columns, got ${this.columns.length}`)
+      return false
+    }
+
+    // Check if header is properly linked
+    if (this.header.right === this.header) {
+      console.warn('Matrix validation failed: no columns linked to header')
+      return false
+    }
+
+    // Check if we have any rows
+    let hasRows = false
+    for (const column of this.columns) {
+      if (column.size > 0) {
+        hasRows = true
+        break
+      }
+    }
+
+    if (!hasRows) {
+      console.warn('Matrix validation failed: no valid piece placements found')
+      return false
+    }
+
+    return true
+  }
+
+  /**
+   * Get count of empty cells in the current board
+   */
+  private getEmptyCellCount(): number {
+    let count = 0
+    for (const column of this.columns) {
+      if (column.name.startsWith('cell-')) {
+        count++
+      }
+    }
+    return count
   }
 
   /**

@@ -1,17 +1,19 @@
 import React, { useState } from 'react'
-import type { Board, SolverAlgorithm, SolverEngine } from '../../types'
+import type { Board, SolverAlgorithm, SolverEngine, SolverResult } from '../../types'
 import { useSolver } from '../../hooks/useSolver'
 import './SolverPanel.css'
 
 interface SolverPanelProps {
   board: Board
   onSolutionApplied?: (solutionIndex: number) => void
+  onSolvingComplete?: (result: SolverResult) => void
   className?: string
 }
 
 export const SolverPanel: React.FC<SolverPanelProps> = ({
   board,
   onSolutionApplied,
+  onSolvingComplete,
   className = '',
 }) => {
   const [selectedSolutionIndex, setSelectedSolutionIndex] = useState(0)
@@ -40,6 +42,7 @@ export const SolverPanel: React.FC<SolverPanelProps> = ({
     },
     onSolvingComplete: (solverResult) => {
       console.log('Solving complete:', solverResult)
+      onSolvingComplete?.(solverResult)
     },
   })
 
