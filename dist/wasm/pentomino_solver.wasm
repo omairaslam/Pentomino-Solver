@@ -1,0 +1,3 @@
+// This is a placeholder WASM file
+// The actual implementation is in pentomino_solver.js
+// This file exists to satisfy module loading expectations

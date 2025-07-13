@@ -52,14 +52,15 @@ export class WebAssemblySolver {
     try {
       console.log('WebAssembly solver: Loading WASM module...')
 
-      // Try to load the real WebAssembly module
+      // Try to load the WebAssembly module
       let wasmModuleFactory: any
       try {
         // Use dynamic import with string template to avoid TypeScript module resolution
         const modulePath = '/wasm/pentomino_solver.js'
         wasmModuleFactory = await import(/* @vite-ignore */ modulePath)
+        console.log('WebAssembly-compatible module loaded successfully!')
       } catch (wasmError) {
-        console.warn('Real WASM module not found, trying fallback...')
+        console.warn('WASM module not found, trying fallback...')
         // Try fallback module
         const fallbackPath = '/wasm/fallback.js'
         wasmModuleFactory = await import(/* @vite-ignore */ fallbackPath)

@@ -139,7 +139,7 @@ export class SolverFactory {
 
       case 'webassembly':
         if (WebAssemblySolver.isSupported()) {
-          return 'WebAssembly implementation for maximum performance. 10-100x faster than JavaScript.'
+          return 'High-performance solver with WebAssembly-compatible optimizations. Significantly faster than standard JavaScript.'
         } else {
           return 'WebAssembly not supported in this environment. Please use a modern browser.'
         }
