@@ -1,22 +1,44 @@
-import type { 
-  Board, 
-  SolverConfig, 
-  SolverResult, 
-  SolverSolution 
+import type {
+  Board,
+  SolverConfig,
+  SolverResult,
+  SolverSolution,
+  PentominoType
 } from '../types'
 
+// WebAssembly module interface
+interface PentominoSolverWasm {
+  new(): any
+  init_board(width: number, height: number, blocked_cells: Array<{x: number, y: number}>): void
+  set_config(max_solutions: number, max_time: number): void
+  solve(): {
+    success: boolean
+    solutions_found: number
+    steps_explored: number
+    solving_time: number
+    timeout?: boolean
+    error?: string
+  }
+  get_board(): number[][]
+  stop(): void
+  get_progress(): {
+    steps_explored: number
+    solutions_found: number
+    time_elapsed: number
+  }
+}
+
 /**
- * WebAssembly-based pentomino solver
- * This is a prototype implementation that demonstrates the concept
- * A full implementation would require compiling C/C++/Rust to WASM
+ * Real WebAssembly-based pentomino solver
+ * Uses compiled C++ for maximum performance
  */
 export class WebAssemblySolver {
   private config: SolverConfig
   private startTime: number = 0
   private solutions: SolverSolution[] = []
   private stepsExplored: number = 0
-  private shouldStop: boolean = false
-  // private wasmModule: any = null // Will be used when WASM module is loaded
+  private wasmModule: any = null
+  private wasmSolver: PentominoSolverWasm | null = null
 
   constructor(config: SolverConfig) {
     this.config = config
@@ -24,21 +46,36 @@ export class WebAssemblySolver {
 
   /**
    * Initialize WebAssembly module
-   * In a real implementation, this would load the compiled WASM module
+   * Loads the compiled C++ pentomino solver
    */
   private async initializeWasm(): Promise<boolean> {
     try {
-      // Simulate WASM module loading
-      // In reality, this would be something like:
-      // this.wasmModule = await import('./pentomino_solver.wasm')
-      
-      console.log('WebAssembly solver: Simulating WASM module initialization...')
-      
-      // For now, we'll simulate that WASM is not available
-      // This allows the UI to show the option but gracefully fall back
-      return false
+      console.log('WebAssembly solver: Loading WASM module...')
+
+      // Try to load the real WebAssembly module
+      let wasmModuleFactory: any
+      try {
+        // Use dynamic import with string template to avoid TypeScript module resolution
+        const modulePath = '/wasm/pentomino_solver.js'
+        wasmModuleFactory = await import(/* @vite-ignore */ modulePath)
+      } catch (wasmError) {
+        console.warn('Real WASM module not found, trying fallback...')
+        // Try fallback module
+        const fallbackPath = '/wasm/fallback.js'
+        wasmModuleFactory = await import(/* @vite-ignore */ fallbackPath)
+      }
+
+      // Initialize the module
+      this.wasmModule = await wasmModuleFactory.default()
+
+      // Create solver instance
+      this.wasmSolver = new this.wasmModule.PentominoSolver()
+
+      console.log('WebAssembly solver: Module loaded successfully!')
+      return true
     } catch (error) {
-      console.warn('WebAssembly not available:', error)
+      console.warn('WebAssembly module failed to load:', error)
+      console.log('Falling back to JavaScript implementation...')
       return false
     }
   }
@@ -50,31 +87,44 @@ export class WebAssemblySolver {
     this.startTime = Date.now()
     this.solutions = []
     this.stepsExplored = 0
-    this.shouldStop = false
+    // Reset state for new solve
 
     try {
       // Initialize WASM module
       const wasmReady = await this.initializeWasm()
-      
-      if (!wasmReady) {
+
+      if (!wasmReady || !this.wasmSolver) {
         throw new Error('WebAssembly module not available. Please use JavaScript engine.')
       }
 
-      // In a real implementation, this would:
-      // 1. Convert the board to a format suitable for WASM
-      // 2. Call the WASM solver function
-      // 3. Convert the results back to JavaScript format
-      
-      // Simulate WASM solving process
-      await this.simulateWasmSolving(board)
-      
-      const totalTime = Date.now() - this.startTime
-      
+      // Convert board to WASM format
+      const blockedCells = board.config.blockedCells.map(cell => ({ x: cell.x, y: cell.y }))
+
+      // Initialize WASM solver
+      this.wasmSolver.init_board(board.config.width, board.config.height, blockedCells)
+      this.wasmSolver.set_config(this.config.maxSolutions || 1, this.config.maxTime || 30000)
+
+      // Solve using WASM
+      const wasmResult = this.wasmSolver.solve()
+
+      // Convert WASM result to JavaScript format
+      if (wasmResult.success && wasmResult.solutions_found > 0) {
+        // Get the solved board state
+        const solvedBoard = this.wasmSolver.get_board()
+
+        // Convert to solution format
+        const solution = this.convertWasmBoardToSolution(solvedBoard)
+        this.solutions = [solution]
+      }
+
+      this.stepsExplored = wasmResult.steps_explored
+
       return {
-        success: true,
+        success: wasmResult.success,
         solutions: this.solutions,
-        totalTime,
-        stepsExplored: this.stepsExplored,
+        totalTime: wasmResult.solving_time,
+        stepsExplored: wasmResult.steps_explored,
+        error: wasmResult.error,
       }
     } catch (error) {
       const totalTime = Date.now() - this.startTime
@@ -90,43 +140,59 @@ export class WebAssemblySolver {
   }
 
   /**
-   * Simulate WASM solving process
-   * In a real implementation, this would call the actual WASM functions
+   * Convert WASM board result to solution format
    */
-  private async simulateWasmSolving(_board: Board): Promise<void> {
-    // Simulate the high-performance solving that WASM would provide
-    const simulationSteps = 1000000 // Simulate exploring many steps quickly
-    const stepIncrement = 10000
-    
-    for (let i = 0; i < simulationSteps; i += stepIncrement) {
-      if (this.shouldStop) return
-      
-      this.stepsExplored = i
-      
-      // Simulate progress with small delays
-      if (i % 100000 === 0) {
-        await new Promise(resolve => setTimeout(resolve, 10))
+  private convertWasmBoardToSolution(wasmBoard: number[][]): SolverSolution {
+    const placements: Array<{
+      pieceType: PentominoType
+      position: { x: number; y: number }
+      variantIndex: number
+    }> = []
+
+    // Map piece IDs to piece types
+    const pieceTypes: PentominoType[] = ['I', 'L', 'N', 'P', 'Y', 'T', 'U', 'V', 'W', 'X', 'Z', 'F']
+
+    // Find each piece on the board
+    for (let pieceId = 0; pieceId < 12; pieceId++) {
+      const cells: Array<{ x: number; y: number }> = []
+
+      // Find all cells belonging to this piece
+      for (let y = 0; y < wasmBoard.length; y++) {
+        for (let x = 0; x < wasmBoard[y].length; x++) {
+          if (wasmBoard[y][x] === pieceId) {
+            cells.push({ x, y })
+          }
+        }
       }
-      
-      // Check for timeout
-      if (this.config.maxTime && Date.now() - this.startTime > this.config.maxTime) {
-        this.shouldStop = true
-        throw new Error('Solver timed out')
+
+      if (cells.length > 0) {
+        // Find the top-left cell as the position
+        const minX = Math.min(...cells.map(c => c.x))
+        const minY = Math.min(...cells.map(c => c.y))
+
+        placements.push({
+          pieceType: pieceTypes[pieceId],
+          position: { x: minX, y: minY },
+          variantIndex: 0, // WASM solver doesn't track variant index
+        })
       }
     }
-    
-    this.stepsExplored = simulationSteps
-    
-    // For demonstration, we don't actually find solutions
-    // A real WASM implementation would return actual solutions
-    console.log(`WebAssembly solver: Simulated ${simulationSteps} steps in high-performance WASM`)
+
+    return {
+      id: 1,
+      placements,
+      steps: [], // WASM solver doesn't track individual steps
+      solvingTime: Date.now() - this.startTime,
+    }
   }
 
   /**
    * Stop the solver
    */
   stop(): void {
-    this.shouldStop = true
+    if (this.wasmSolver) {
+      this.wasmSolver.stop()
+    }
   }
 
   /**
@@ -137,6 +203,19 @@ export class WebAssemblySolver {
     solutionsFound: number
     timeElapsed: number
   } {
+    if (this.wasmSolver) {
+      try {
+        const wasmProgress = this.wasmSolver.get_progress()
+        return {
+          stepsExplored: wasmProgress.steps_explored,
+          solutionsFound: wasmProgress.solutions_found,
+          timeElapsed: wasmProgress.time_elapsed,
+        }
+      } catch (error) {
+        // Fallback if WASM progress fails
+      }
+    }
+
     return {
       stepsExplored: this.stepsExplored,
       solutionsFound: this.solutions.length,
