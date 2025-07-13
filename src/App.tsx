@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { PiecePalette } from './components/PiecePalette'
-import { createBoard, placePiece, removePiece } from './utils/board-utils'
+import { SolverPanel } from './components/SolverPanel'
+import { createBoard, placePiece, removePiece, resetBoard } from './utils/board-utils'
 import { createPentominoPiece, getAllPentominoTypes } from './utils/pentomino-definitions'
 import { DEFAULT_PRESET } from './utils/constants'
 import { useDragAndDrop } from './hooks/useDragAndDrop'
@@ -77,6 +78,32 @@ function App() {
     pieceManipulation.flipPiece(piece, true)
   }, [pieceManipulation])
 
+  // Handle solution application
+  const handleSolutionApplied = useCallback((solutionIndex: number) => {
+    // This will be implemented when we have solver results
+    console.log('Apply solution:', solutionIndex)
+  }, [])
+
+  // Reset board
+  const handleResetBoard = useCallback(() => {
+    // Reset the board
+    setBoard(prev => {
+      const newBoard = { ...prev }
+      resetBoard(newBoard)
+      return newBoard
+    })
+
+    // Reset all pieces
+    setPieces(prev => prev.map(piece => ({
+      ...piece,
+      isPlaced: false,
+      position: { x: 0, y: 0 },
+      zIndex: 0,
+    })))
+
+    setSelectedPieceId(undefined)
+  }, [])
+
   // Placeholder handlers for future board interaction
   // const handleCellClick = (position: { x: number; y: number }) => {
   //   console.log('Cell clicked:', position)
@@ -121,19 +148,34 @@ function App() {
                   ))}
                 </div>
               </div>
+
+              <div className="board-controls">
+                <button className="btn" onClick={handleResetBoard}>
+                  🔄 Reset Board
+                </button>
+              </div>
             </div>
 
-            <div className="pieces-area">
-              <PiecePalette
-                pieces={pieces}
-                selectedPieceId={selectedPieceId}
-                onPieceSelect={handlePieceSelect}
-                onPieceRotate={handlePieceRotate}
-                onPieceFlip={handlePieceFlip}
-                onDragStart={dragAndDrop.startDrag}
-                onDragEnd={() => dragAndDrop.endDrag()}
-                layout="grid"
-              />
+            <div className="side-panels">
+              <div className="pieces-area">
+                <PiecePalette
+                  pieces={pieces}
+                  selectedPieceId={selectedPieceId}
+                  onPieceSelect={handlePieceSelect}
+                  onPieceRotate={handlePieceRotate}
+                  onPieceFlip={handlePieceFlip}
+                  onDragStart={dragAndDrop.startDrag}
+                  onDragEnd={() => dragAndDrop.endDrag()}
+                  layout="grid"
+                />
+              </div>
+
+              <div className="solver-area">
+                <SolverPanel
+                  board={board}
+                  onSolutionApplied={handleSolutionApplied}
+                />
+              </div>
             </div>
           </div>
 

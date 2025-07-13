@@ -67,10 +67,28 @@
 
 .board-area {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.board-controls {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.side-panels {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  min-width: 320px;
 }
 
 .pieces-area {
+  min-width: 300px;
+}
+
+.solver-area {
   min-width: 300px;
 }
 
@@ -202,9 +220,14 @@
     gap: var(--spacing-lg);
   }
 
-  .pieces-area {
+  .side-panels {
     min-width: auto;
-    order: -1; /* Show pieces above board on mobile */
+    order: -1; /* Show panels above board on mobile */
+  }
+
+  .pieces-area,
+  .solver-area {
+    min-width: auto;
   }
 
   .info-panel {
