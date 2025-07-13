@@ -8,6 +8,7 @@ import type {
   SolverEngine 
 } from '../types'
 import { SolverFactory, type PentominoSolver } from '../solvers/SolverFactory'
+import { performanceMonitor } from '../utils/performance'
 
 interface UseSolverProps {
   onSolutionFound?: (solution: SolverSolution) => void
@@ -55,6 +56,10 @@ export function useSolver({
       // Create solver instance
       solverRef.current = SolverFactory.createSolver(finalConfig)
 
+      // Start performance monitoring
+      const boardConfigStr = `${board.config.width}x${board.config.height}`
+      performanceMonitor.startBenchmark(boardConfigStr, finalConfig.algorithm)
+
       // Start progress tracking
       progressIntervalRef.current = setInterval(() => {
         if (solverRef.current) {
@@ -66,7 +71,13 @@ export function useSolver({
 
       // Solve the puzzle
       const solverResult = await solverRef.current.solve(board)
-      
+
+      // End performance monitoring
+      performanceMonitor.endBenchmark(
+        solverResult.stepsExplored,
+        solverResult.solutions.length
+      )
+
       // Notify about solutions found
       if (solverResult.solutions.length > 0) {
         solverResult.solutions.forEach((solution: SolverSolution) => {

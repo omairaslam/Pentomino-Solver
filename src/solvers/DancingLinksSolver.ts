@@ -12,7 +12,7 @@ import {
   getPentominoVariantCount, 
   getPentominoVariant 
 } from '../utils/pentomino-definitions'
-import { getPieceCells, isPointInBounds } from '../utils/geometry'
+import { getPieceCells } from '../utils/geometry'
 
 /**
  * Node in the dancing links data structure
@@ -108,35 +108,43 @@ export class DancingLinksSolver {
 
   /**
    * Build the exact cover matrix for the pentomino problem
+   * Optimized version with better matrix construction
    */
   private buildMatrix(board: Board): void {
     const emptyCells: Point[] = []
-    
-    // Find all empty cells
+
+    // Find all empty cells and create a lookup map
+    const cellToIndex = new Map<string, number>()
     for (let y = 0; y < board.config.height; y++) {
       for (let x = 0; x < board.config.width; x++) {
         if (board.cells[y][x].state === 'empty') {
+          const cellKey = `${x},${y}`
+          cellToIndex.set(cellKey, emptyCells.length)
           emptyCells.push({ x, y })
         }
       }
     }
 
+    // Early exit if not enough cells for all pieces
+    if (emptyCells.length < 60) { // 12 pieces × 5 cells each
+      return
+    }
+
     // Create columns: one for each piece type + one for each empty cell
     const pieceTypes = getAllPentominoTypes()
-    // const totalColumns = pieceTypes.length + emptyCells.length // For future use
 
     // Initialize header and columns
     this.header = new ColumnNode('header')
     this.columns = []
 
-    // Create piece columns
+    // Create piece columns (constraints: each piece must be used exactly once)
     for (const pieceType of pieceTypes) {
       const column = new ColumnNode(`piece-${pieceType}`)
       this.columns.push(column)
       this.linkColumnToHeader(column)
     }
 
-    // Create cell columns
+    // Create cell columns (constraints: each cell must be covered exactly once)
     for (let i = 0; i < emptyCells.length; i++) {
       const cell = emptyCells[i]
       const column = new ColumnNode(`cell-${cell.x}-${cell.y}`)
@@ -148,23 +156,29 @@ export class DancingLinksSolver {
     let rowId = 0
     for (const pieceType of pieceTypes) {
       const variantCount = getPentominoVariantCount(pieceType)
-      
+
       for (let variantIndex = 0; variantIndex < variantCount; variantIndex++) {
         const variant = getPentominoVariant(pieceType, variantIndex)
-        
-        for (let y = 0; y < board.config.height; y++) {
-          for (let x = 0; x < board.config.width; x++) {
+
+        // Optimize: only try positions where the piece could potentially fit
+        const pieceCells = getPieceCells(variant, { x: 0, y: 0 })
+        const bounds = this.getPieceBounds(pieceCells)
+        const maxX = board.config.width - bounds.width
+        const maxY = board.config.height - bounds.height
+
+        for (let y = 0; y <= maxY; y++) {
+          for (let x = 0; x <= maxX; x++) {
             const position: Point = { x, y }
             const pieceCells = getPieceCells(variant, position)
-            
+
             // Check if all piece cells are valid and empty
-            const isValidPlacement = pieceCells.every(cell => 
-              isPointInBounds(cell, board.config) &&
-              board.cells[cell.y][cell.x].state === 'empty'
-            )
-            
-            if (isValidPlacement) {
-              this.createRow(rowId, pieceType, position, variantIndex, pieceCells, emptyCells)
+            const isValidPlacement = pieceCells.every(cell => {
+              const cellKey = `${cell.x},${cell.y}`
+              return cellToIndex.has(cellKey)
+            })
+
+            if (isValidPlacement && pieceCells.length === 5) {
+              this.createRow(rowId, pieceType, position, variantIndex, pieceCells, cellToIndex, pieceTypes.length)
               this.rowToPlacement.set(rowId, { pieceType, position, variantIndex })
               rowId++
             }
@@ -175,7 +189,30 @@ export class DancingLinksSolver {
   }
 
   /**
+   * Get the bounding box of a piece variant
+   */
+  private getPieceBounds(pieceCells: Point[]): { width: number; height: number } {
+    if (pieceCells.length === 0) return { width: 0, height: 0 }
+
+    let minX = pieceCells[0].x, maxX = pieceCells[0].x
+    let minY = pieceCells[0].y, maxY = pieceCells[0].y
+
+    for (const cell of pieceCells) {
+      minX = Math.min(minX, cell.x)
+      maxX = Math.max(maxX, cell.x)
+      minY = Math.min(minY, cell.y)
+      maxY = Math.max(maxY, cell.y)
+    }
+
+    return {
+      width: maxX - minX + 1,
+      height: maxY - minY + 1
+    }
+  }
+
+  /**
    * Create a row in the matrix for a specific piece placement
+   * Optimized version with better indexing
    */
   private createRow(
     rowId: number,
@@ -183,38 +220,47 @@ export class DancingLinksSolver {
     _position: Point,
     _variantIndex: number,
     pieceCells: Point[],
-    emptyCells: Point[]
+    cellToIndex: Map<string, number>,
+    pieceColumnOffset: number
   ): void {
     const rowNodes: DLXNode[] = []
-    
+
     // Add node for piece constraint
     const pieceTypes = getAllPentominoTypes()
     const pieceColumnIndex = pieceTypes.indexOf(pieceType)
-    const pieceNode = new DLXNode(rowId)
-    pieceNode.column = this.columns[pieceColumnIndex]
-    this.linkNodeToColumn(pieceNode, this.columns[pieceColumnIndex])
-    rowNodes.push(pieceNode)
-    
+    if (pieceColumnIndex >= 0 && pieceColumnIndex < this.columns.length) {
+      const pieceNode = new DLXNode(rowId)
+      pieceNode.column = this.columns[pieceColumnIndex]
+      this.linkNodeToColumn(pieceNode, this.columns[pieceColumnIndex])
+      rowNodes.push(pieceNode)
+    }
+
     // Add nodes for cell constraints
     for (const cell of pieceCells) {
-      const cellIndex = emptyCells.findIndex(c => c.x === cell.x && c.y === cell.y)
-      if (cellIndex !== -1) {
-        const cellColumnIndex = pieceTypes.length + cellIndex
-        const cellNode = new DLXNode(rowId)
-        cellNode.column = this.columns[cellColumnIndex]
-        this.linkNodeToColumn(cellNode, this.columns[cellColumnIndex])
-        rowNodes.push(cellNode)
+      const cellKey = `${cell.x},${cell.y}`
+      const cellIndex = cellToIndex.get(cellKey)
+      if (cellIndex !== undefined) {
+        const cellColumnIndex = pieceColumnOffset + cellIndex
+        if (cellColumnIndex < this.columns.length) {
+          const cellNode = new DLXNode(rowId)
+          cellNode.column = this.columns[cellColumnIndex]
+          this.linkNodeToColumn(cellNode, this.columns[cellColumnIndex])
+          rowNodes.push(cellNode)
+        }
       }
     }
-    
-    // Link row nodes horizontally
-    for (let i = 0; i < rowNodes.length; i++) {
-      const current = rowNodes[i]
-      const next = rowNodes[(i + 1) % rowNodes.length]
-      const prev = rowNodes[(i - 1 + rowNodes.length) % rowNodes.length]
-      
-      current.right = next
-      current.left = prev
+
+    // Only create row if we have the expected number of nodes (1 piece + 5 cells)
+    if (rowNodes.length === 6) {
+      // Link row nodes horizontally
+      for (let i = 0; i < rowNodes.length; i++) {
+        const current = rowNodes[i]
+        const next = rowNodes[(i + 1) % rowNodes.length]
+        const prev = rowNodes[(i - 1 + rowNodes.length) % rowNodes.length]
+
+        current.right = next
+        current.left = prev
+      }
     }
   }
 
