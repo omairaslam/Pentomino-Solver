@@ -86,100 +86,39 @@ const Pieces = {
 };
 
 const Solver = {
+  worker: new Worker('solver.js'),
+
   solve() {
-    const solutions = [];
-    const board = Grid.cells.map(row => row.slice());
-    const pieces = Pieces.list.map(piece => this.getPieceVariations(piece)).flat();
-    this.backtrack(board, pieces, [], solutions);
-    console.log(`Found ${solutions.length} solutions`);
-    if (solutions.length > 0) {
-      this.visualizeSolution(solutions[0]);
-    }
-  },
+    document.getElementById('status').textContent = 'Solving...';
+    const board = Grid.cells;
+    const pieces = Pieces.list;
+    this.worker.postMessage({ board, pieces });
 
-  getPieceVariations(piece) {
-    const variations = [];
-    let currentShape = piece.shape;
-    for (let i = 0; i < 4; i++) {
-      variations.push({ ...piece, shape: this.normalizeShape(currentShape) });
-      currentShape = this.rotate(currentShape);
-    }
-    currentShape = this.flip(piece.shape);
-    for (let i = 0; i < 4; i++) {
-      variations.push({ ...piece, shape: this.normalizeShape(currentShape) });
-      currentShape = this.rotate(currentShape);
-    }
-    return variations;
-  },
-
-  rotate(shape) {
-    return shape.map(([row, col]) => [col, -row]);
-  },
-
-  flip(shape) {
-    return shape.map(([row, col]) => [row, -col]);
-  },
-
-  normalizeShape(shape) {
-    const minRow = Math.min(...shape.map(([row, _]) => row));
-    const minCol = Math.min(...shape.map(([_, col]) => col));
-    return shape.map(([row, col]) => [row - minRow, col - minCol]);
-  },
-
-  backtrack(board, pieces, currentSolution, solutions) {
-    if (pieces.length === 0) {
-      solutions.push(currentSolution);
-      return;
-    }
-
-    const piece = pieces[0];
-    const remainingPieces = pieces.slice(1);
-
-    for (let row = 0; row < Grid.height; row++) {
-      for (let col = 0; col < Grid.width; col++) {
-        if (this.canPlace(board, piece, row, col)) {
-          const newBoard = this.placePiece(board, piece, row, col);
-          const newSolution = [...currentSolution, { piece, row, col }];
-          this.backtrack(newBoard, remainingPieces, newSolution, solutions);
-        }
+    this.worker.onmessage = function(e) {
+      document.getElementById('status').textContent = '';
+      const { solutions, placements } = e.data;
+      console.log(`Found ${solutions.length} solutions`);
+      if (solutions.length > 0) {
+        const solution = solutions[0].map(rowIndex => placements[rowIndex]);
+        visualizeSolution(solution);
+      } else {
+        document.getElementById('status').textContent = 'No solutions found.';
       }
-    }
-  },
+    };
+  }
+};
 
-  canPlace(board, piece, row, col) {
-    for (const [r, c] of piece.shape) {
-      const newRow = row + r;
-      const newCol = col + c;
-      if (
-        newRow >= Grid.height ||
-        newCol >= Grid.width ||
-        newRow < 0 ||
-        newCol < 0 ||
-        board[newRow][newCol] !== 0
-      ) {
-        return false;
-      }
-    }
-    return true;
-  },
-
-  placePiece(board, piece, row, col) {
-    const newBoard = board.map(row => row.slice());
-    for (const [r, c] of piece.shape) {
-      newBoard[row + r][col + c] = piece.name;
-    }
-    return newBoard;
-  },
-
-  visualizeSolution(solution) {
-    Grid.init();
-    solution.forEach(({ piece, row, col }) => {
-      piece.shape.forEach(([r, c]) => {
-        const cellIndex = (row + r) * Grid.width + (col + c);
-        const cell = document.getElementById('grid-container').children[cellIndex];
+function visualizeSolution(solution) {
+  Grid.init();
+  solution.forEach(({ piece, row, col }) => {
+    piece.shape.forEach(([r, c]) => {
+      const cellIndex = (row + r) * Grid.width + (col + c);
+      const cell = document.getElementById('grid-container').children[cellIndex];
+      if (cell) {
         cell.style.backgroundColor = piece.color;
-      });
+      }
     });
+  });
   }
 };
 
