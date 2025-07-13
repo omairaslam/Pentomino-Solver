@@ -1,0 +1,224 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  background-color: var(--bg-secondary);
+  padding: var(--spacing-xl) var(--spacing-lg);
+  text-align: center;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.app-header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: var(--spacing-sm);
+  background: linear-gradient(135deg, var(--piece-i), var(--piece-t));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.app-header p {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.app-main {
+  flex: 1;
+  padding: var(--spacing-xl) var(--spacing-lg);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.demo-section {
+  max-width: 1200px;
+  width: 100%;
+  text-align: center;
+}
+
+.demo-section h2 {
+  font-size: 1.8rem;
+  margin-bottom: var(--spacing-md);
+  color: var(--text-primary);
+}
+
+.demo-section p {
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xl);
+  line-height: 1.7;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.game-layout {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+  align-items: flex-start;
+}
+
+.board-area {
+  display: flex;
+  justify-content: center;
+}
+
+.pieces-area {
+  min-width: 300px;
+}
+
+.info-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-xl);
+  text-align: left;
+  background-color: var(--bg-secondary);
+  padding: var(--spacing-lg);
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--border-color);
+}
+
+.info-panel h3 {
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+  font-size: 1.2rem;
+}
+
+.info-panel ul {
+  list-style: none;
+  padding: 0;
+}
+
+.info-panel li {
+  padding: var(--spacing-xs) 0;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.info-panel li:last-child {
+  border-bottom: none;
+}
+
+.pieces-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.piece-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--border-radius-sm);
+  font-weight: bold;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.board-placeholder {
+  background-color: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-xl);
+  text-align: center;
+  box-shadow: 0 4px 6px var(--shadow-color);
+}
+
+.board-placeholder p {
+  margin-bottom: var(--spacing-md);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.placeholder-grid {
+  display: inline-block;
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+  background-color: var(--bg-primary);
+}
+
+.grid-row {
+  display: flex;
+}
+
+.grid-cell {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-fast);
+}
+
+.grid-cell.empty {
+  background-color: var(--bg-tertiary);
+}
+
+.grid-cell.blocked {
+  background-color: var(--text-muted);
+}
+
+.grid-cell:hover {
+  background-color: var(--piece-i);
+  transform: scale(1.1);
+}
+
+.button-group {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: var(--spacing-lg) var(--spacing-md);
+  }
+
+  .app-header h1 {
+    font-size: 2rem;
+  }
+
+  .app-header p {
+    font-size: 1rem;
+  }
+
+  .app-main {
+    padding: var(--spacing-lg) var(--spacing-md);
+  }
+
+  .game-layout {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+  }
+
+  .pieces-area {
+    min-width: auto;
+    order: -1; /* Show pieces above board on mobile */
+  }
+
+  .info-panel {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+  }
+
+  .pieces-info {
+    justify-content: center;
+  }
+
+  .piece-badge {
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+  }
+}

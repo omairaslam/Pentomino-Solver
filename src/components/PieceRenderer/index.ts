@@ -1,0 +1,1 @@
+export { PieceRenderer } from './PieceRenderer'

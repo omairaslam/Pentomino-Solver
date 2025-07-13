@@ -1,0 +1,226 @@
+.piece-renderer {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius-md);
+  background-color: var(--bg-tertiary);
+  border: 2px solid transparent;
+  transition: all var(--transition-fast);
+  cursor: grab;
+  user-select: none;
+  position: relative;
+}
+
+.piece-renderer:hover {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+.piece-renderer:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.piece-renderer.selected {
+  border-color: var(--piece-i);
+  background-color: rgba(186, 225, 255, 0.1);
+  box-shadow: 0 0 0 2px rgba(186, 225, 255, 0.3);
+}
+
+.piece-renderer.dragging {
+  cursor: grabbing;
+  opacity: 0.8;
+  transform: scale(1.05);
+  z-index: 1000;
+  box-shadow: 0 8px 16px var(--shadow-color);
+}
+
+.piece-canvas {
+  border-radius: var(--border-radius-sm);
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  transition: all var(--transition-fast);
+}
+
+.piece-canvas:focus {
+  outline: 2px solid var(--piece-i);
+  outline-offset: 2px;
+}
+
+.piece-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.piece-type {
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.piece-variant {
+  background-color: var(--bg-secondary);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.6rem;
+  color: var(--text-muted);
+}
+
+/* Size variants */
+.piece-renderer.small {
+  padding: var(--spacing-xs);
+}
+
+.piece-renderer.large {
+  padding: var(--spacing-md);
+}
+
+/* State variants */
+.piece-renderer.placed {
+  opacity: 0.6;
+  cursor: default;
+  pointer-events: none;
+}
+
+.piece-renderer.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.piece-renderer.invalid {
+  border-color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.piece-renderer.valid-drop {
+  border-color: #22c55e;
+  background-color: rgba(34, 197, 94, 0.1);
+}
+
+/* Animation classes */
+.piece-renderer.animate-in {
+  animation: pieceSlideIn 0.3s ease-out;
+}
+
+.piece-renderer.animate-rotate {
+  animation: pieceRotate 0.2s ease-in-out;
+}
+
+.piece-renderer.animate-flip {
+  animation: pieceFlip 0.2s ease-in-out;
+}
+
+@keyframes pieceSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pieceRotate {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(45deg) scale(1.1); }
+  100% { transform: rotate(90deg) scale(1); }
+}
+
+@keyframes pieceFlip {
+  0% { transform: scaleX(1); }
+  50% { transform: scaleX(0); }
+  100% { transform: scaleX(1); }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .piece-renderer {
+    padding: var(--spacing-xs);
+  }
+  
+  .piece-info {
+    font-size: 0.7rem;
+  }
+  
+  .piece-variant {
+    font-size: 0.55rem;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .piece-renderer {
+    padding: var(--spacing-md);
+    min-width: 44px; /* Minimum touch target size */
+    min-height: 44px;
+  }
+  
+  .piece-renderer:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  
+  .piece-renderer:active {
+    background-color: var(--bg-secondary);
+    transform: scale(0.95);
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .piece-renderer {
+    border-width: 3px;
+  }
+  
+  .piece-renderer.selected {
+    border-width: 4px;
+  }
+  
+  .piece-canvas {
+    filter: contrast(1.2);
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .piece-renderer {
+    transition: none;
+  }
+  
+  .piece-renderer.animate-in,
+  .piece-renderer.animate-rotate,
+  .piece-renderer.animate-flip {
+    animation: none;
+  }
+  
+  .piece-renderer:hover {
+    transform: none;
+  }
+  
+  .piece-renderer.dragging {
+    transform: none;
+  }
+}
+
+/* Print styles */
+@media print {
+  .piece-renderer {
+    border: 1px solid black;
+    background-color: white;
+    box-shadow: none;
+  }
+  
+  .piece-info {
+    color: black;
+  }
+}
