@@ -1,0 +1,1 @@
+export { BoardConfigPanel } from './BoardConfigPanel'

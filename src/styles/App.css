@@ -186,6 +186,14 @@
   background-color: var(--text-muted);
 }
 
+.grid-overflow {
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
 .grid-cell:hover {
   background-color: var(--piece-i);
   transform: scale(1.1);

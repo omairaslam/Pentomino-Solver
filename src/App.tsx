@@ -1,17 +1,19 @@
 import { useState, useCallback } from 'react'
 import { PiecePalette } from './components/PiecePalette'
 import { SolverPanel } from './components/SolverPanel'
+import { BoardConfigPanel } from './components/BoardConfigPanel'
 import { createBoard, placePiece, removePiece } from './utils/board-utils'
 import { applySolutionToBoard, clearSolution } from './utils/solution-application'
 import { createPentominoPiece, getAllPentominoTypes } from './utils/pentomino-definitions'
 import { DEFAULT_PRESET } from './utils/constants'
 import { useDragAndDrop } from './hooks/useDragAndDrop'
 import { usePieceManipulation } from './hooks/usePieceManipulation'
-import type { PentominoPiece, Point, SolverResult } from './types'
+import type { PentominoPiece, Point, SolverResult, PresetConfig } from './types'
 import './styles/App.css'
 
 function App() {
-  // Create the default board (8x8 with 2x2 hole)
+  // Board configuration state
+  const [currentPreset, setCurrentPreset] = useState<PresetConfig>(DEFAULT_PRESET)
   const [board, setBoard] = useState(() => createBoard(DEFAULT_PRESET))
 
   // Create all pentomino pieces
@@ -123,6 +125,25 @@ function App() {
     console.log('Solver completed:', result)
   }, [])
 
+  // Handle board preset change
+  const handlePresetChange = useCallback((preset: PresetConfig) => {
+    setCurrentPreset(preset)
+    const newBoard = createBoard(preset)
+    setBoard(newBoard)
+    setCurrentSolution(null) // Clear any existing solution
+
+    // Reset all pieces to palette
+    setPieces(pieces => pieces.map(piece => ({
+      ...piece,
+      position: { x: 0, y: 0 },
+      isPlaced: false,
+      zIndex: 0
+    })))
+
+    setSelectedPieceId(undefined)
+    console.log('Board preset changed to:', preset.name)
+  }, [])
+
   // Placeholder handlers for future board interaction
   // const handleCellClick = (position: { x: number; y: number }) => {
   //   console.log('Cell clicked:', position)
@@ -147,24 +168,39 @@ function App() {
             The board shows valid drop zones when dragging.
           </p>
 
+          {/* Board Configuration Panel */}
+          <BoardConfigPanel
+            currentPreset={currentPreset}
+            onPresetChange={handlePresetChange}
+            className="board-config"
+          />
+
           <div className="game-layout">
             <div className="board-area">
               <div className="board-placeholder">
                 <p>Interactive Board (Canvas-based)</p>
-                <p>8×8 Grid with 2×2 Hole Configuration</p>
+                <p>{currentPreset.name} - {currentPreset.width}×{currentPreset.height}</p>
                 <div className="placeholder-grid">
-                  {Array.from({ length: 8 }, (_, y) => (
+                  {Array.from({ length: Math.min(currentPreset.height, 8) }, (_, y) => (
                     <div key={y} className="grid-row">
-                      {Array.from({ length: 8 }, (_, x) => (
-                        <div
-                          key={x}
-                          className={`grid-cell ${
-                            (x === 3 || x === 4) && (y === 3 || y === 4) ? 'blocked' : 'empty'
-                          }`}
-                        />
-                      ))}
+                      {Array.from({ length: Math.min(currentPreset.width, 8) }, (_, x) => {
+                        const isBlocked = currentPreset.blockedCells.some(cell =>
+                          cell.x === x && cell.y === y
+                        )
+                        return (
+                          <div
+                            key={x}
+                            className={`grid-cell ${isBlocked ? 'blocked' : 'empty'}`}
+                          />
+                        )
+                      })}
                     </div>
                   ))}
+                  {(currentPreset.width > 8 || currentPreset.height > 8) && (
+                    <div className="grid-overflow">
+                      <span>Board is larger than preview (showing {Math.min(currentPreset.width, 8)}×{Math.min(currentPreset.height, 8)})</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
