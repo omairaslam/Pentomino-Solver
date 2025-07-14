@@ -363,15 +363,27 @@ export default async function createModule() {
                     };
                 }
 
+                console.log('WebAssembly solver starting...');
+                console.log('Board size:', this.boardWidth, 'x', this.boardHeight);
+
+                // Set longer timeout for complex puzzles
+                this.wasmInstance.setConfig(1, 120000); // 2 minutes timeout
+
                 const startTime = Date.now();
                 const solutionsFound = this.wasmInstance.solve();
                 const solvingTime = Date.now() - startTime;
+
+                console.log('WebAssembly solver finished');
+                console.log('Solutions found:', solutionsFound);
+                console.log('Steps explored:', this.wasmInstance.getProgress());
+                console.log('Solving time:', solvingTime, 'ms');
 
                 return {
                     success: true,
                     solutions_found: solutionsFound,
                     steps_explored: this.wasmInstance.getProgress(),
-                    solving_time: solvingTime
+                    solving_time: solvingTime,
+                    timeout: solvingTime >= 120000
                 };
             }
 

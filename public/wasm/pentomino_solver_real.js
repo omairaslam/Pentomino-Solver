@@ -25,6 +25,10 @@ async function instantiate(module, imports = {}) {
       // assembly/index/validateCurrentSolution() => bool
       return exports.validateCurrentSolution() != 0;
     },
+    isTimedOut() {
+      // assembly/index/isTimedOut() => bool
+      return exports.isTimedOut() != 0;
+    },
   }, exports);
   function __liftString(pointer) {
     if (!pointer) return null;
@@ -48,6 +52,8 @@ export const {
   validateCurrentSolution,
   getPieceCount,
   getUsedPieceCount,
+  getEmptyCellCount,
+  isTimedOut,
   getBoardCell,
   getProgress,
   getSolutionsFound,

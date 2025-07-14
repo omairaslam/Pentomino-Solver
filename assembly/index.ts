@@ -23,7 +23,7 @@ let board: Int32Array = new Int32Array(0);
 let solutionsFound: i32 = 0;
 let stepsExplored: i32 = 0;
 let maxSolutions: i32 = 1;
-let maxTime: i32 = 30000;
+let maxTime: i32 = 120000; // Increase to 2 minutes
 let startTime: i64 = 0;
 let shouldStop: bool = false;
 
@@ -161,31 +161,41 @@ function solveBacktrack(): bool {
 
   stepsExplored++;
 
-  // Find next piece to place (simple order for now)
-  let nextPiece = findNextUnusedPiece();
-  if (nextPiece == -1) {
-    // All pieces placed - solution found!
+  // Find first empty cell for more efficient placement
+  let emptyCell = findFirstEmptyCell();
+  if (emptyCell == -1) {
+    // All cells filled - solution found!
     solutionsFound++;
     return maxSolutions <= 1; // Stop if we only want one solution
   }
 
-  // Try different orientations of the selected piece
-  let basePiece = getPieceDefinition(nextPiece);
+  let emptyX = emptyCell % boardWidth;
+  let emptyY = emptyCell / boardWidth;
 
-  // Try 4 rotations
-  for (let rotation = 0; rotation < 4; rotation++) {
-    let rotatedPiece = rotatePiece(basePiece, rotation);
-    let normalizedPiece = normalizePiece(rotatedPiece);
+  // Try each unused piece at this position
+  for (let pieceId = 0; pieceId < 12; pieceId++) {
+    if (usedPieces[pieceId]) continue;
 
-    // Try all positions on the board
-    for (let y = 0; y < boardHeight; y++) {
-      for (let x = 0; x < boardWidth; x++) {
-        if (shouldStop) return false;
+    let basePiece = getPieceDefinition(pieceId);
 
-        if (canPlacePiece(normalizedPiece, x, y)) {
+    // Try 4 rotations
+    for (let rotation = 0; rotation < 4; rotation++) {
+      if (shouldStop) return false;
+
+      let rotatedPiece = rotatePiece(basePiece, rotation);
+      let normalizedPiece = normalizePiece(rotatedPiece);
+
+      // Try placing piece such that it covers the empty cell
+      for (let cellIdx = 0; cellIdx < 5; cellIdx++) {
+        let pieceX = normalizedPiece[cellIdx * 2];
+        let pieceY = normalizedPiece[cellIdx * 2 + 1];
+        let startX = emptyX - pieceX;
+        let startY = emptyY - pieceY;
+
+        if (canPlacePiece(normalizedPiece, startX, startY)) {
           // Place the piece
-          placePiece(normalizedPiece, x, y, nextPiece);
-          usedPieces[nextPiece] = true;
+          placePiece(normalizedPiece, startX, startY, pieceId);
+          usedPieces[pieceId] = true;
 
           // Recursively solve
           if (solveBacktrack()) {
@@ -193,8 +203,8 @@ function solveBacktrack(): bool {
           }
 
           // Backtrack: remove the piece
-          removePiece(normalizedPiece, x, y);
-          usedPieces[nextPiece] = false;
+          removePiece(normalizedPiece, startX, startY);
+          usedPieces[pieceId] = false;
         }
       }
     }
@@ -210,6 +220,15 @@ function findNextUnusedPiece(): i32 {
     }
   }
   return -1; // All pieces used
+}
+
+function findFirstEmptyCell(): i32 {
+  for (let i = 0; i < boardWidth * boardHeight; i++) {
+    if (board[i] == -1) {
+      return i;
+    }
+  }
+  return -1; // No empty cells
 }
 
 function canPlacePiece(orientation: StaticArray<i32>, startX: i32, startY: i32): bool {
@@ -290,6 +309,18 @@ export function getUsedPieceCount(): i32 {
     if (usedPieces[i]) count++;
   }
   return count;
+}
+
+export function getEmptyCellCount(): i32 {
+  let count = 0;
+  for (let i = 0; i < boardWidth * boardHeight; i++) {
+    if (board[i] == -1) count++;
+  }
+  return count;
+}
+
+export function isTimedOut(): bool {
+  return shouldStop;
 }
 
 export function getBoardCell(x: i32, y: i32): i32 {
