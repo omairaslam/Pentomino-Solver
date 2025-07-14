@@ -20,6 +20,12 @@ async function instantiate(module, imports = {}) {
   };
   const { exports } = await WebAssembly.instantiate(module, adaptedImports);
   const memory = exports.memory || imports.env.memory;
+  const adaptedExports = Object.setPrototypeOf({
+    validateCurrentSolution() {
+      // assembly/index/validateCurrentSolution() => bool
+      return exports.validateCurrentSolution() != 0;
+    },
+  }, exports);
   function __liftString(pointer) {
     if (!pointer) return null;
     const
@@ -31,7 +37,7 @@ async function instantiate(module, imports = {}) {
     while (end - start > 1024) string += String.fromCharCode(...memoryU16.subarray(start, start += 1024));
     return string + String.fromCharCode(...memoryU16.subarray(start, end));
   }
-  return exports;
+  return adaptedExports;
 }
 export const {
   memory,
@@ -39,6 +45,9 @@ export const {
   setBlockedCell,
   setConfig,
   solve,
+  validateCurrentSolution,
+  getPieceCount,
+  getUsedPieceCount,
   getBoardCell,
   getProgress,
   getSolutionsFound,

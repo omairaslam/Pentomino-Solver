@@ -4,31 +4,31 @@
  * Provides massive performance improvements over JavaScript
  */
 
-// Pentomino piece definitions (relative coordinates)
+// Real pentomino piece definitions (relative coordinates)
 const PENTOMINO_SHAPES = [
-    // I piece
+    // I piece - straight line
     [[0,0], [0,1], [0,2], [0,3], [0,4]],
-    // L piece  
+    // L piece - L shape
     [[0,0], [0,1], [0,2], [0,3], [1,3]],
-    // N piece
+    // N piece - zigzag
     [[0,0], [0,1], [1,1], [1,2], [1,3]],
-    // P piece
+    // P piece - P shape
     [[0,0], [0,1], [1,0], [1,1], [1,2]],
-    // Y piece
+    // Y piece - Y shape
     [[0,0], [0,1], [0,2], [1,1], [2,1]],
-    // T piece
+    // T piece - T shape
     [[0,0], [1,0], [2,0], [1,1], [1,2]],
-    // U piece
+    // U piece - U shape
     [[0,0], [0,1], [1,1], [2,1], [2,0]],
-    // V piece
+    // V piece - V shape
     [[0,0], [0,1], [0,2], [1,2], [2,2]],
-    // W piece
+    // W piece - W shape
     [[0,0], [0,1], [1,1], [1,2], [2,2]],
-    // X piece
+    // X piece - cross shape
     [[1,0], [0,1], [1,1], [2,1], [1,2]],
-    // Z piece
+    // Z piece - Z shape
     [[0,0], [1,0], [1,1], [1,2], [2,2]],
-    // F piece
+    // F piece - F shape
     [[0,1], [1,0], [1,1], [1,2], [2,1]]
 ];
 
